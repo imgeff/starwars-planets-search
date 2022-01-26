@@ -8,13 +8,29 @@ function App() {
   const [copyDataPlanets, setCopyDataPlanets] = useState([]);
   const [dataPlanets, setDataPlanets] = useState([]);
   const [filterName, setFilterName] = useState({ filterByName: { name: '' } });
-  const [filterNumber, setFilterNumber] = useState(
+  const [numericFilter, setNumericFilter] = useState(
+    { column: 'population', comparison: 'maior que', value: 0 },
+  );
+  const [numericFilters, setNumericFilters] = useState(
     {
-      filterByNumericValues: [{
-        column: 'population', comparison: 'maior que', value: 0,
-      }],
+      filterByNumericValues: [],
     },
   );
+  const [options, setOptions] = useState(
+    {
+      population: true,
+      orbital_period: true,
+      diameter: true,
+      rotation_period: true,
+      surface_water: true,
+    },
+  );
+
+  useEffect(() => {
+    const freeOptions = Object.entries(options);
+    const newColumn = freeOptions.find((column) => column[1] === true);
+    setNumericFilter({ ...numericFilter, column: newColumn[0] });
+  }, [options]);
 
   useEffect(() => {
     fetchStarwars()
@@ -23,6 +39,30 @@ function App() {
         setDataPlanets(results);
       });
   }, []);
+
+  useEffect(() => {
+    numericFilters.filterByNumericValues.forEach((filter) => {
+      const { column, comparison, value } = filter;
+      if (comparison === 'maior que') {
+        const filter1 = dataPlanets
+          .filter((planet) => Number(planet[column]) > Number(value));
+        setDataPlanets(filter1);
+        setOptions({ ...options, [column]: false });
+      }
+      if (comparison === 'menor que') {
+        const filter2 = dataPlanets
+          .filter((planet) => Number(planet[column]) < Number(value));
+        setDataPlanets(filter2);
+        setOptions({ ...options, [column]: false });
+      }
+      if (comparison === 'igual a') {
+        const filter3 = dataPlanets
+          .filter((planet) => Number(planet[column]) === Number(value));
+        setDataPlanets(filter3);
+        setOptions({ ...options, [column]: false });
+      }
+    });
+  }, [numericFilters]);
 
   const filterPlanets = (name) => {
     const filterPlanetName = copyDataPlanets
@@ -40,32 +80,15 @@ function App() {
   };
 
   const handleChangeNumeric = ({ target: { name, value } }) => {
-    setFilterNumber({
-      filterByNumericValues: [{
-        ...filterNumber.filterByNumericValues[0], [name]: value,
-      }],
-    });
+    setNumericFilter({ ...numericFilter, [name]: value });
   };
 
   const handleFilter = () => {
-    const columnFilter = filterNumber.filterByNumericValues[0].column;
-    const comparisonFilter = filterNumber.filterByNumericValues[0].comparison;
-    const valueFilter = filterNumber.filterByNumericValues[0].value;
-    if (comparisonFilter === 'maior que') {
-      const filter = copyDataPlanets
-        .filter((planet) => Number(planet[columnFilter]) > Number(valueFilter));
-      setDataPlanets(filter);
-    }
-    if (comparisonFilter === 'menor que') {
-      const filter = copyDataPlanets
-        .filter((planet) => Number(planet[columnFilter]) < Number(valueFilter));
-      setDataPlanets(filter);
-    }
-    if (comparisonFilter === 'igual a') {
-      const filter = copyDataPlanets
-        .filter((planet) => Number(planet[columnFilter]) === Number(valueFilter));
-      setDataPlanets(filter);
-    }
+    setNumericFilters({
+      filterByNumericValues: [
+        ...numericFilters.filterByNumericValues, { ...numericFilter },
+      ],
+    });
   };
 
   return (
@@ -82,19 +105,19 @@ function App() {
         data-testid="column-filter"
         onChange={ handleChangeNumeric }
         name="column"
-        value={ filterNumber.filterByNumericValues[0].column }
+        value={ numericFilter.column }
       >
-        <option>population</option>
-        <option>orbital_period</option>
-        <option>diameter</option>
-        <option>rotation_period</option>
-        <option>surface_water</option>
+        { options.population && <option>population</option>}
+        { options.orbital_period && <option>orbital_period</option>}
+        { options.diameter && <option>diameter</option>}
+        { options.rotation_period && <option>rotation_period</option>}
+        { options.surface_water && <option>surface_water</option>}
       </select>
       <select
         data-testid="comparison-filter"
         onChange={ handleChangeNumeric }
         name="comparison"
-        value={ filterNumber.filterByNumericValues[0].comparison }
+        value={ numericFilter.comparison }
       >
         <option>maior que</option>
         <option>menor que</option>
@@ -105,7 +128,7 @@ function App() {
         type="number"
         onChange={ handleChangeNumeric }
         name="value"
-        value={ filterNumber.filterByNumericValues[0].value }
+        value={ numericFilter.value }
         min="0"
       />
       <button data-testid="button-filter" type="button" onClick={ handleFilter }>
